@@ -23,19 +23,28 @@ const ACCOUNT_TOKEN = process.env.ACCOUNT_TOKEN;
         init: 1000,
     }]);
 
-    let posts = await search(prompt.search, prompt.country);
-    let projects = posts.search.content.projects;
+    let likedCounter = 1;
+    let posts;
+    let nextOrdinal;
+    while (nextOrdinal || !posts) {
+        posts = await search(prompt.search, prompt.country, nextOrdinal);
+        nextOrdinal = posts.search.nextOrdinal;
+        
+        let projects = posts.search.content.projects;
 
-    console.log(`Projects found: `, projects.length);
+        console.log(`Projects found on current page: ${projects.length}. Ordinal: ${posts.search.nextOrdinal}`);
 
-    for (let project of projects) {
-        let result = await like(project);
-        console.log(result);
-        await sleep(prompt.timeout);
+        for (let project of projects) {
+            let result = await like(project);
+            console.log(`[${likedCounter}]`,result);
+            await sleep(prompt.timeout);
+            likedCounter += 1;
+        }
     }
+
 })();
 
-async function search(search, country = "") {
+async function search(search, country = "", count) {
     let url = "https://www.behance.net/search?content=projects";
 
     if (search) {
@@ -46,6 +55,12 @@ async function search(search, country = "") {
         url += "&country=" + country;
     }
 
+    if (count) {
+        url += "&ordinal=" + count;
+    }
+
+    url = encodeURI(url);
+    
     console.log(`search link: `, url);
 
     let response = await fetch(url, {
